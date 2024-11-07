@@ -1,0 +1,175 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Login Page</title>
+
+    <script src="https://alcdn.msauth.net/browser/2.24.0/js/msal-browser.min.js"></script>
+   
+     <script
+     crossorigin="anonymous"
+     src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"
+   ></script>
+   <style>
+     html, body {
+       height: 100%;
+     }
+
+     body {
+       margin: 0;
+     }
+
+     #webchat {
+       height: 100%;
+       width: 100%;
+     }
+   </style>
+</head>
+<body>
+    <div id="webchat" role="main"></div>
+
+   
+
+    <!-- Hero Section -->
+    <div class="hero">
+
+                <button id="logoutButton" onclick="logout()">Logout</button>
+           
+  
+     
+    </div>
+
+
+
+    <script>
+        // Microsoft Authentication Configuration
+        const msalConfig = {
+            auth: {
+                clientId: "78fc114d-1b88-4859-9568-57267c0dd0f7", // Replace with your actual client ID
+                authority: "https://login.microsoftonline.com/d70cb4db-69c4-4a49-aaf3-f1e7ac277686", // Replace with your tenant ID or use `/common` for multi-tenant
+                redirectUri: window.location.href,  // Redirect URI should be the same page
+            },
+            cache: {
+                cacheLocation: "localStorage",  // Storing auth state in localStorage
+                storeAuthStateInCookie: false,  // Set to true for IE support if needed
+            }
+        };
+
+        // MSAL PublicClientApplication instance
+        const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+        // Check if user is already logged in and display the username
+        const user = JSON.parse(localStorage.getItem("user"));
+        
+        if (user) {
+
+        } else {
+            // If no user info, redirect to login page
+            window.location.href = "login.html";
+        }
+
+        // Logout handling with logoutRedirect
+        let isLogoutInProgress = false;  // Prevent multiple logout actions
+
+        function logout() {
+            if (isLogoutInProgress) {
+                console.log("Logout is already in progress. Please wait...");
+                return;
+            }
+
+            isLogoutInProgress = true; // Prevent initiating a second logout
+
+            // Clear the user from localStorage before initiating logout
+            localStorage.removeItem("user"); // Clear user data from localStorage
+
+            // Check if user is cleared from localStorage
+            console.log("User data cleared from localStorage:", !localStorage.getItem("user"));
+
+            // Now perform the MSAL logout
+            msalInstance.logoutRedirect().then(() => {
+                // Log success, but the page should reload automatically after the redirect
+                console.log("Logout successful. Redirecting to login page.");
+            }).catch((error) => {
+                console.error("Logout failed", error);
+            }).finally(() => {
+                // Reset the flag after the logout flow completes (regardless of success or failure)
+                isLogoutInProgress = false;
+            });
+        }
+
+        // Handling login state after redirect
+        msalInstance.handleRedirectPromise().then((response) => {
+            if (response) {
+                console.log("Logged in:", response);
+                // Store user info after login
+                localStorage.setItem("user", JSON.stringify(response.account)); // Store user info
+            }
+        }).catch((error) => {
+            console.error("Error during redirect handling", error);
+        });
+
+
+
+
+
+
+
+
+
+
+
+        // Function to fetch the token from your backend
+      async function getDirectLineToken() {
+        try {
+          const response = await fetch("http://localhost:3000/get-directline-token", {
+            method: 'GET', // or POST if needed
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch token');
+          }
+
+          const data = await response.json();
+          return data.token;  // Assuming the token is in the "token" field of the response
+        } catch (error) {
+          console.error('Error fetching token:', error);
+          return null;  // Handle error gracefully
+        }
+      }
+
+      // Function to initialize WebChat
+      async function initWebChat() {
+        const token = await getDirectLineToken();
+
+        if (token) {
+          window.WebChat.renderWebChat(
+            {
+              directLine: window.WebChat.createDirectLine({
+                token: token,
+              }),
+              userID: 'aadigurjarfdfdfd',  // Dynamically set the user ID as needed
+              username: 'Web Chat User',    // Dynamically set the username as needed
+              locale: 'en-US',
+            },
+            document.getElementById('webchat')
+          );
+        } else {
+          console.error('No token available, WebChat cannot be initialized');
+        }
+      }
+
+      // Initialize the WebChat after the page is loaded
+      window.addEventListener('load', initWebChat);
+     
+    </script>
+    
+
+</body>
+</html>
+
+
